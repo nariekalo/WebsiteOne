@@ -1,31 +1,22 @@
-this.EventsUtils = function() {
-  this.ajaxRequest = function() {
-    var _this = this;
-    if (window.location.href === _this.href) {
-      return $.get(_this.href, _this.updateHangoutsData);
-    } else {
-      clearInterval(_this.intervalId);
+var browserAdapter = {
+    jumpTo : function (url) {
+        window.location.assign(url);
     }
-  };
-
-  this.updateHangoutsData = function(data) {
-    var _this = this;
-    if (data.match('hangouts-details-well')) {
-      clearInterval(_this.intervalId);
-
-      $('#hg-management').html(data);
-      $('.readme-link').popover({ trigger: 'focus' });
-      WebsiteOne.renderHangoutButton();
-    }
-  };
-
-  this.init = function() {
-    var _this = this;
-    _this.href = window.location.href;
-    /** _this.intervalId = setInterval(_this.ajaxRequest, 10000);*/
-
-    $('.readme-link').popover({ trigger: 'focus' });
-  };
 };
 
-(new this.EventsUtils).init();
+var events = {
+    makeRowBodyClickable : function () {
+        $('.event-row').css('cursor', 'pointer');
+        $('.event-row').on('click', function (event) {
+            var clicked_row = $(this);
+            var href = clicked_row.find('.event-title a')[0].href;
+            browserAdapter.jumpTo(href);
+        });
+    }
+}
+
+$(document).ready(function () {
+    events.makeRowBodyClickable();
+    editEventForm.handleUserTimeZone();
+    showEvent.showUserTimeZone();
+});

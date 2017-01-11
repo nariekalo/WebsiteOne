@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Project, :type => :model do
+describe Project, type: :model do
   context '#save' do
     subject { build_stubbed(:project) }
     it { is_expected.to respond_to :create_activity }
@@ -33,24 +33,47 @@ describe Project, :type => :model do
       expect(subject).to_not be_valid
     end
 
-    it "should not accept invalid Pivotal Tracker URL" do
+    it 'should throw error for incomplete github url' do
+      subject.github_url = 'https://github.com/edx'
+      expect{ subject.github_repo_name }.to raise_error(NoMethodError, "undefined method `[]' for nil:NilClass")
+    end
+
+    it 'should not accept invalid Pivotal Tracker URL' do
       subject.pivotaltracker_url = 'https://www.pivotaltracker.com/s/../../912312'
       expect(subject).to_not be_valid
+    end
+
+    context "Updating friendly ids" do
+      let(:project) { create(:project, title: 'Old news') }
+      before { project.update(title: 'New and seksay title') }
+
+      it "should regenerate the project's friendly id when the title changes" do
+        expect(project.friendly_id).to eq 'new-and-seksay-title'
+      end
+
+      it "should still be able to find the project by its old id" do
+        expect(Project.friendly.find('old-news')).to eq project
+      end
     end
 
     context 'Pivotal Tracker URL' do
       it 'should correct mistakes in pivotal tracker url' do
         subject.pivotaltracker_url = 'www.pivotaltracker.com/s/projects/1234'
         expect(subject).to be_valid
-        expect(subject.pivotaltracker_url).to eq 'https://www.pivotaltracker.com/s/projects/1234'
+        expect(subject.pivotaltracker_url).to eq 'https://www.pivotaltracker.com/n/projects/1234'
       end
 
       it 'should accept the subject id and convert that into a valid URL' do
         subject.pivotaltracker_url = '1234'
         expect(subject).to be_valid
-        expect(subject.pivotaltracker_url).to eq 'https://www.pivotaltracker.com/s/projects/1234'
+        expect(subject.pivotaltracker_url).to eq 'https://www.pivotaltracker.com/n/projects/1234'
       end
 
+      it 'should accept new pivotal traker url format' do
+        subject.pivotaltracker_url = 'www.pivotaltracker.com/n/projects/1234'
+        expect(subject).to be_valid
+        expect(subject.pivotaltracker_url).to eq 'https://www.pivotaltracker.com/n/projects/1234'
+      end
     end
   end
 
@@ -113,6 +136,16 @@ describe Project, :type => :model do
     it 'returns the url for the project github contribution page' do
       allow(subject).to receive(:github_repo).and_return('test/test')
       expect(subject.contribution_url).to eq "https://github.com/test/test/graphs/contributors"
+    end
+  end
+
+  describe '#codeclimate_gpa' do
+
+    subject(:project) { build_stubbed(:project, github_url: 'https://github.com/AgileVentures/WebsiteOne') }
+
+    it 'returns the CodeClimate GPA' do
+      expect(CodeClimateBadges).to receive_message_chain(:new, :gpa).and_return('3.4')
+      expect(project.gpa).to eq '3.4'
     end
   end
 end

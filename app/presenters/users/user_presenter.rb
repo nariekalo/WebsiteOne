@@ -53,8 +53,8 @@ class UserPresenter < BasePresenter
       gravatar_url = user.gravatar_url(options)
     end
 
-    image_tag(gravatar_url, width: options[:size], id: options[:id],
-              height: options[:size], alt: display_name, class: options[:class], style: options[:style])
+      image_tag(gravatar_url, width: options[:size], id: options[:id],
+                height: options[:size], alt: display_name, class: options[:class], style: options[:style])
   end
 
   def email_link(text=nil)
@@ -89,5 +89,13 @@ class UserPresenter < BasePresenter
     %w{first_name last_name skills bio}
       .select { |field| user.send(field).blank? }
       .map(&:humanize).to_sentence
+  end
+
+  def user_same_as? other_user
+    user == other_user
+  end
+
+  def display_hire_me?(current_user = nil)
+    user.display_hire_me && !user_same_as?(current_user)
   end
 end

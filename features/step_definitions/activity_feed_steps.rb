@@ -31,17 +31,9 @@ And(/^I create a project named "([^"]*)"$/) do |project|
       | Title               | #{project}                                      |
       | Description         | Description New                                 |
       | GitHub link         | http://www.github.com/abc                       |
-      | PivotalTracker link | http://www.pivotaltracker.com/s/projects/982890 |
+      | Issue Tracker link | http://www.pivotaltracker.com/s/projects/982890 |
     And I select "Status" to "Active"
     And I click the "Submit" button
-}
-end
-
-And(/^I create a hangout named "([^"]*)"$/) do |hangout|
-  steps %Q{
-    And I am on the "Show" page for project "Hello Galaxy"
-    And I click the "Join Project" button
-    And I click the "Start a Hangout On Air" button
 }
 end
 

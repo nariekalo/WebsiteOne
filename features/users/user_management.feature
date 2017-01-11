@@ -1,3 +1,4 @@
+@vcr
 Feature: Create and maintain projects
   In order to manage my account settings
   As I user I would like to have a "My account" page
@@ -39,15 +40,6 @@ Feature: Create and maintain projects
     When I click the "Update" button
     Then I should see "Email can't be blank"
 
-  @omniauth
-  Scenario: Link my GitHub profile link to my profile
-    Given I have a GitHub profile with username "tochman"
-    And I am on my "Edit Profile" page
-    When I click "GitHub"
-    And my profile should be updated with my GH username
-    When I am on "profile" page for user "me"
-    Then I should see a link "tochman" to "https://github.com/tochman"
-
   Scenario: Deleting my profile
     Given the following projects exist:
       | title       | description          | status   | author |
@@ -58,3 +50,4 @@ Feature: Create and maintain projects
     When I delete my profile
     And I am on the "Show" page for project "hello world"
     Then I should see "by Anonymous"
+

@@ -6,7 +6,7 @@ section.doc-preview {
   height: auto;
   min-height: 20px;
   max-height: 100%;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 
   h3 {
@@ -41,6 +41,9 @@ section.doc-preview {
   width: 100%;
   margin: 0;
   position: relative;
+  @media (max-width: $screen-sm-min - 1px) {
+    padding:0px;
+  }
 }
 
 .tab-content {

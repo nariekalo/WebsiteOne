@@ -30,17 +30,18 @@ class AuthenticationsController < ApplicationController
 
   def destroy
     @authentication = current_user.authentications.find(params[:id])
-    if @authentication
-      if current_user.authentications.count == 1 and current_user.encrypted_password.blank?
-        # Bryan: TESTED
-        flash[:alert] = 'Bad idea!'
-      elsif @authentication.destroy
+    if @authentication and current_user.authentications.count == 1 and current_user.encrypted_password.blank?
+      # Bryan: TESTED
+      flash[:alert] = 'Failed to unlink GitHub. Please use another provider for login or reset password.'
+    elsif @authentication and @authentication.destroy
+      user = User.find(current_user.id)
+      if user.update_attributes(github_profile_url: nil)
         flash[:notice] = 'Successfully removed profile.'
       else
-        flash[:alert] = 'Authentication method could not be removed.'
+        flash[:notice] = 'Github profile url could not be removed.'
       end
     else
-      flash[:alert] = 'Authentication method not found.'
+      flash[:alert] = 'Authentication method could not be removed.'
     end
     redirect_to edit_user_registration_path(current_user)
   end
@@ -98,7 +99,7 @@ class AuthenticationsController < ApplicationController
 
     if user.save
       # Bryan: TESTED
-      Mailer.send_welcome_message(user).deliver if Features.enabled?(:welcome_email)
+      Mailer.send_welcome_message(user).deliver_now if Features.enabled?(:welcome_email)
       flash[:notice] = 'Signed in successfully.'
       sign_in_and_redirect(:user, user)
     else

@@ -33,14 +33,14 @@ describe EventInstancePresenter do
     end
 
     it 'returns an array of participants' do
-      participant = FactoryGirl.create(:user, gplus: hangout.participants.first.last[:person][:id])
+      participant = FactoryGirl.create(:user, gplus: hangout.participants.first.last['person']['id'])
 
       expect(presenter.participants.count).to eq(2)
       expect(presenter.participants.first).to eq(participant)
     end
 
     it 'do not show the host in the list of participants' do
-      FactoryGirl.create(:user, gplus: hangout.participants.first.last[:person][:id])
+      FactoryGirl.create(:user, gplus: hangout.participants.first.last['person']['id'])
       expect(presenter.participants).not_to include(hangout.user)
     end
 
@@ -96,7 +96,7 @@ describe EventInstancePresenter do
     end
 
     it 'returns an array with nullUser if participant gplus_id is not found' do
-      hangout.participants = [ [ "0", { :person => { displayName: "Bob", id: "not_registered" } } ] ]
+      hangout.participants = [ [ "0", { 'person' => { displayName: "Bob", 'id' => "not_registered" } } ] ]
       expect(presenter.participants.first.display_name).to eq('Bob')
     end
 
@@ -110,7 +110,7 @@ describe EventInstancePresenter do
     end
 
     it 'returns a link to video' do
-      expect(presenter.video_link).to be_nil
+      expect(presenter.video_link).to eq "video unavailable ('Start Broadcast' not pressed, or Hangout/YouTube fail)"
     end
 
     it 'returns a link to youtube player' do

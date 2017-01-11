@@ -1,6 +1,9 @@
 class Event < ActiveRecord::Base
   has_many :event_instances
+  belongs_to :project
   serialize :exclusions
+
+  belongs_to :creator, class_name: 'User'
 
   extend FriendlyId
   friendly_id :name, use: :slugged
@@ -9,6 +12,7 @@ class Event < ActiveRecord::Base
   validates :name, :time_zone, :repeats, :category, :start_datetime, :duration, presence: true
   validates :url, uri: true, :allow_blank => true
   validates :repeats_every_n_weeks, :presence => true, :if => lambda { |e| e.repeats == 'weekly' }
+  validates :repeat_ends_on, :presence => true, :allow_blank => false, :if => lambda{ |e| e.repeats == 'weekly' and e.repeat_ends_string == 'on'}
   validate :must_have_at_least_one_repeats_weekly_each_days_of_the_week, :if => lambda { |e| e.repeats == 'weekly' }
   attr_accessor :next_occurrence_time_attr
   attr_accessor :repeat_ends_string
@@ -17,7 +21,7 @@ class Event < ActiveRecord::Base
   COLLECTION_TIME_PAST = 15.minutes
 
   REPEATS_OPTIONS = %w[never weekly]
-  REPEAT_ENDS_OPTIONS = %w[never on]
+  REPEAT_ENDS_OPTIONS = %w[on never]
   DAYS_OF_THE_WEEK = %w[monday tuesday wednesday thursday friday saturday sunday]
 
   def set_repeat_ends_string
@@ -177,16 +181,6 @@ class Event < ActiveRecord::Base
     sched
   end
 
-  def self.transform_params(params)
-    event_params = params.require(:event).permit!
-    if (params['start_date'].present? && params['start_time'].present?)
-      event_params[:start_datetime] = "#{params['start_date']} #{params['start_time']} UTC"
-    end
-    event_params[:repeat_ends] = (event_params['repeat_ends_string'] == 'on')
-    event_params[:repeat_ends_on]= "#{params[:repeat_ends_on]} UTC"
-    event_params
-  end
-
   def start_time_with_timezone
     DateTime.parse(start_time.strftime('%k:%M ')).in_time_zone(time_zone)
   end
@@ -195,7 +189,37 @@ class Event < ActiveRecord::Base
     event_instances.order(:created_at).last
   end
 
+  def recent_hangouts
+    event_instances
+      .where('updated_at BETWEEN ? AND ?', 1.days.ago + duration, DateTime.now.end_of_day)
+      .order(updated_at: :desc)
+  end
+
+  def less_than_ten_till_start?
+    return true if within_current_event_duration?
+    Time.now > next_event_occurrence_with_time[:time] - 10.minutes
+  rescue
+    false
+  end
+
+  def within_current_event_duration?
+    after_current_start_time? and before_current_end_time?
+  end
+
   private
+
+  def before_current_end_time?
+    Time.now < (schedule.previous_occurrence(Time.now) + duration*60)
+  rescue
+    false
+  end
+
+  def after_current_start_time?
+    Time.now > schedule.previous_occurrence(Time.now)
+  rescue
+    false
+  end
+
   def must_have_at_least_one_repeats_weekly_each_days_of_the_week
     if repeats_weekly_each_days_of_the_week.empty?
       errors.add(:base, 'You must have at least one repeats weekly each days of the week')

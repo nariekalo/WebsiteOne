@@ -104,9 +104,14 @@
   }
 }
 
+.media-body {
+  display: block;
+  width: 55%;
+}
+
 .media-item {
-  height: 100px;
-  margin-bottom: 30px;
+  height: 120px;
+  margin-bottom: 40px;
 }
 
 /* CSS for USER PROFILE page */
@@ -135,6 +140,16 @@
   display: none;
 }
 
+@media (max-width: $screen-sm-min - 1px) {
+  .float-xs-none {
+    float:none;
+  }
+}
+@media (min-width: $screen-sm){
+  select#project_filter{
+    width: 100%;
+  }
+}
 /* Responsive versions */
 
 /* End of CSS for USER PROFILE page */
