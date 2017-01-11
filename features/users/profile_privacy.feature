@@ -1,3 +1,4 @@
+@vcr
 Feature: As a site user
   To protect my privacy
   I want to decide if which part of my profile should be made public
@@ -8,16 +9,15 @@ Feature: As a site user
       | Alice       | Jones       | alice@btinternet.co.uk  |     false       |
       | Bob         | Butcher     | bobb112@hotmail.com     |     true        |
 
-
   Scenario: User profile should be public by default
     Given I am not logged in
     And I am on the "Our members" page
     Then I should not see "Alice Jones"
     And I should see "Bob Butcher"
 
-  @enable-custom-errors
   Scenario: Visitor should not be able to access a private profile
-    Given I am not logged in
+    Given Feature "Custom Errors" is enabled
+    And I am not logged in
     And I visit Alice's profile page
     Then I should not see "Alice Jones"
 
@@ -59,6 +59,7 @@ Feature: As a site user
     And "Display email" should not be checked
     When I set my email to be public
     And I click "Update"
+    And I am on my "Profile" page
     Then I should see my email
 
   @javascript
@@ -74,19 +75,20 @@ Feature: As a site user
 
   Scenario: Hire Me button should be private by default
     Given I am logged in
+    And I sign out
     And I am on my "Profile" page
     Then I should not see button "Hire me"
 
-  @javascript
   Scenario: Should be able to make my Hire Me button public
     Given I am logged in
     And I am on my "Edit Profile" page
     And "Display Hire Me" should not be checked
     When I set my Hire Me to be public
     And I click "Update"
+    And I sign out
+    And I am on my "Profile" page
     Then I should see button "Hire me"
 
-  @javascript
   Scenario: Should be able to make my Hire Me button private again
     Given I am logged in
     And My hire me was set to public
@@ -94,7 +96,16 @@ Feature: As a site user
     Then "Display Hire Me" should be checked
     When I set my Hire Me to be private
     And I click "Update"
+    And I sign out
     And I am on my "Profile" page
+    Then I should not see button "Hire me"
+
+  Scenario: Should not be able to see Hire Me button when logged in
+    Given I am logged in
+    And I am on my "Edit Profile" page
+    And "Display Hire Me" should not be checked
+    When I set my Hire Me to be public
+    And I click "Update"
     Then I should not see button "Hire me"
 
     # Bryan: To be added back later in another story

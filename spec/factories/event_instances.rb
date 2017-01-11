@@ -1,13 +1,13 @@
 FactoryGirl.define do
   sequence :participant do |n|
-    [ "#{n}", { :person => { displayName: "Participant_#{n}", id: "youtube_id_#{n}", isBroadcaster: 'false' } } ]
+    { "#{n}" => { 'person' => { displayName: "Participant_#{n}", 'id' => "youtube_id_#{n}", isBroadcaster: 'false' } } }
   end
   sequence :broadcaster do |n|
-    [ "#{n}", { :person => { displayName: "Broadcaster#{n}", id: "youtube_id_#{n}", isBroadcaster: 'true' } } ]
+    { "#{n-1}" => { 'person' => { displayName: "Broadcaster#{n}", 'id' => "youtube_id_#{n}", isBroadcaster: 'true' } } }
   end
 
   factory :event_instance do
-    ignore do
+    transient do
       created Time.now
       updated Time.now
     end
@@ -22,7 +22,7 @@ FactoryGirl.define do
     event
     user
 
-    participants { [(generate :broadcaster), (generate :participant)] }
+    participants { (generate :broadcaster).merge((generate :participant)) }
 
     created_at { Time.parse("#{created} UTC")}
     updated_at { Time.parse("#{updated} UTC")}

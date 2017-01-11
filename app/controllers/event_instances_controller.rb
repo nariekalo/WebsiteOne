@@ -5,8 +5,17 @@ class EventInstancesController < ApplicationController
   def update
     event_instance = EventInstance.find_or_create_by(uid: params[:id])
 
-    if event_instance.try!(:update, hangout_params)
-      SlackService.post_hangout_notification(event_instance) if params[:notify] == 'true'
+    event_instance_params = check_and_transform_params(event_instance)
+    hangout_url_changed = event_instance.hangout_url != event_instance_params[:hangout_url]
+    yt_video_id_changed = event_instance.yt_video_id != event_instance_params[:yt_video_id]
+    slack_notify = params[:notify] == 'true'
+
+    if event_instance.try!(:update, event_instance_params)
+      SlackService.post_hangout_notification(event_instance) if (slack_notify && event_instance.hangout_url?) || (event_instance.started? && hangout_url_changed)
+      SlackService.post_yt_link(event_instance) if (slack_notify && event_instance.yt_video_id?) || yt_video_id_changed
+
+      TwitterService.tweet_hangout_notification(event_instance) if event_instance.started? && hangout_url_changed
+      TwitterService.tweet_yt_link(event_instance) if yt_video_id_changed
 
       redirect_to(event_path params[:event_id]) && return if local_request? && params[:event_id].present?
       head :ok
@@ -33,7 +42,7 @@ class EventInstancesController < ApplicationController
   def allowed?
     allowed_sites = %w(a-hangout-opensocial.googleusercontent.com)
     origin = request.env['HTTP_ORIGIN']
-    allowed_sites.any?{ |url| origin =~ /#{url}/ }
+    allowed_sites.any? { |url| origin =~ /#{url}/ }
   end
 
   def local_request?
@@ -45,19 +54,38 @@ class EventInstancesController < ApplicationController
     response.headers['Access-Control-Allow-Methods'] = 'PUT'
   end
 
-  def hangout_params
+  def check_and_transform_params(event_instance)
     params.require(:host_id)
     params.require(:title)
 
-    ActionController::Parameters.new(
-      title: params[:title],
-      project_id: params[:project_id],
-      event_id: params[:event_id],
-      category: params[:category],
-      user_id: params[:host_id],
-      participants: params[:participants],
-      hangout_url: params[:hangout_url],
-      yt_video_id: params[:yt_video_id]).permit!
+    transform_params(event_instance)
+  end
 
+  def transform_params(event_instance)
+    ActionController::Parameters.new(
+        title: params[:title],
+        project_id: params[:project_id],
+        event_id: params[:event_id],
+        category: params[:category],
+        user_id: params[:host_id],
+        hangout_participants_snapshots_attributes: [{participants: params[:participants]}],
+        participants: merge_participants(event_instance.participants, params[:participants]),
+        hangout_url: params[:hangout_url],
+        yt_video_id: params[:yt_video_id],
+        hoa_status: params[:hoa_status],
+        url_set_directly: params[:url_set_directly],
+        updated_at: Time.now
+    ).permit!
+  end
+
+  def merge_participants(existing_participants, new_participants)
+    return new_participants unless existing_participants
+    return existing_participants unless new_participants
+    new_participants.each do |_, v|
+      unless existing_participants.values.any? { |struc| struc['person']['id'] == v['person']['id'] }
+        existing_participants[existing_participants.length.to_s] = v
+      end
+    end
+    return existing_participants
   end
 end

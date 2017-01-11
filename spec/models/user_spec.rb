@@ -1,10 +1,15 @@
 require 'spec_helper'
 
-describe User, :type => :model do
-
+describe User, type: :model do
   include_examples 'presentable'
-
+  before do
+    Features.slack.invites.enabled = true
+    slack_invite_job = class_double(SlackInviteJob).as_stubbed_const(transfer_nested_constants: true)
+    allow(slack_invite_job).to receive(:perform_async).at_least(1).times
+  end
   subject { build_stubbed :user }
+
+  it { should have_one :subscription }
 
   it { is_expected.to have_many(:status) }
 
@@ -30,13 +35,13 @@ describe User, :type => :model do
 
   it 'should reject duplicate email addresses' do
     user = FactoryGirl.create(:user)
-    expect(build_stubbed(:user, email: user.email)).not_to be_valid
+    expect(build_stubbed(:user, email: user.email)).to_not be_valid
   end
 
   it 'should reject email addresses identical up to case' do
     upcased_email = subject.email.upcase
-    user = FactoryGirl.create(:user, email: upcased_email)
-    expect(build_stubbed(:user, email: subject.email)).not_to be_valid
+    _existing_user = FactoryGirl.create(:user, email: upcased_email)
+    expect(build_stubbed(:user, email: subject.email)).to_not be_valid
   end
 
   it 'should be invalid without password' do
@@ -97,38 +102,38 @@ describe User, :type => :model do
       Geocoder.configure(:ip_lookup => :test)
       Geocoder::Lookup::Test.add_stub(
           '85.228.111.204', [
-                              {
-                                  ip: '85.228.111.204',
-                                  country_code: 'SE',
-                                  country_name: 'Sweden',
-                                  region_code: '28',
-                                  region_name: 'Västra Götaland',
-                                  city: 'Alingsås',
-                                  zipcode: '44139',
-                                  latitude: 57.9333,
-                                  longitude: 12.5167,
-                                  metro_code: '',
-                                  areacode: ''
-                              }.as_json
-                          ]
+          {
+              ip: '85.228.111.204',
+              country_code: 'SE',
+              country_name: 'Sweden',
+              region_code: '28',
+              region_name: 'Västra Götaland',
+              city: 'Alingsås',
+              zipcode: '44139',
+              latitude: 57.9333,
+              longitude: 12.5167,
+              metro_code: '',
+              areacode: ''
+          }.as_json
+      ]
       )
 
       Geocoder::Lookup::Test.add_stub(
           '50.78.167.161', [
-                             {
-                                 ip: '50.78.167.161',
-                                 country_code: 'US',
-                                 country_name: 'United States',
-                                 region_code: 'WA',
-                                 region_name: 'Washington',
-                                 city: 'Seattle',
-                                 zipcode: '',
-                                 latitude: 47.6062,
-                                 longitude: -122.3321,
-                                 metro_code: '819',
-                                 areacode: '206'
-                             }.as_json
-                         ]
+          {
+              ip: '50.78.167.161',
+              country_code: 'US',
+              country_name: 'United States',
+              region_code: 'WA',
+              region_name: 'Washington',
+              city: 'Seattle',
+              zipcode: '',
+              latitude: 47.6062,
+              longitude: -122.3321,
+              metro_code: '819',
+              areacode: '206'
+          }.as_json
+      ]
       )
 
     end
@@ -296,11 +301,7 @@ describe User, :type => :model do
 
   describe 'incomplete profile' do
 
-    let(:user) { @user }
-
-    before(:each) do
-      @user = FactoryGirl.create(:user, updated_at: '2014-09-30 05:00:00 UTC')
-    end
+    let(:user) { FactoryGirl.create(:user, updated_at: '2014-09-30 05:00:00 UTC') }
 
     it 'returns true if bio empty' do
       user.bio = ''
@@ -331,5 +332,143 @@ describe User, :type => :model do
       expect(User.new.incomplete?).to be_truthy
     end
   end
-end
 
+  context 'karma' do
+
+    describe '#commit_count_total' do
+
+      subject(:user) { FactoryGirl.create(:user) }
+
+      let!(:commit_count) { FactoryGirl.create(:commit_count, user: user, commit_count: 369) }
+
+      context 'single commit count' do
+        it 'returns totals commits over all projects' do
+          expect(user.commit_count_total).to eq 369
+        end
+      end
+
+      context 'multiple commit count' do
+        let!(:commit_count_2) { FactoryGirl.create(:commit_count, user: user, commit_count: 123) }
+        it 'returns totals commits over all projects' do
+          expect(user.commit_count_total).to eq 492
+        end
+      end
+    end
+
+    describe '#number_hangouts_started_with_more_than_one_participant' do
+
+      subject(:user) { FactoryGirl.create(:user) }
+
+      let!(:event_instance) { FactoryGirl.create(:event_instance, user: user) }
+      context 'single event instance' do
+        it 'returns total number of hangouts started with more than one participant' do
+          expect(user.number_hangouts_started_with_more_than_one_participant).to eq 1
+        end
+      end
+
+      context 'two event instances' do
+        let!(:event_instance2) { FactoryGirl.create(:event_instance, user: user) }
+        it 'returns total number of hangouts started with more than one participant' do
+          expect(user.number_hangouts_started_with_more_than_one_participant).to eq 2
+        end
+      end
+
+    end
+
+
+    describe '#hangouts_attended_with_more_than_one_participant' do
+      subject(:user) {FactoryGirl.create(:user, hangouts_attended_with_more_than_one_participant: 1)}
+      it 'returns 1' do
+        expect(user.hangouts_attended_with_more_than_one_participant).to eq 1
+      end
+    end
+
+    describe '#profile_completeness' do
+      subject(:user) { FactoryGirl.create(:user) }
+      it 'calculates profile completeness' do
+        expect(user.profile_completeness).to eq 6
+      end
+    end
+
+    describe '#activity' do
+      subject(:user) { FactoryGirl.create(:user) }
+      it 'calculates sign in activity' do
+        expect(user.activity).to eq 0
+      end
+    end
+
+    describe '#membership_length' do
+      subject(:user) { FactoryGirl.create(:user) }
+      it 'calculates membership length' do
+        expect(user.membership_length).to eq 0
+      end
+    end
+
+    describe '#membership_type' do
+      subject(:user) { FactoryGirl.create(:user) }
+
+      it 'returns membership type' do
+        expect(user.membership_type).to eq 'Basic'
+      end
+
+      context 'premium member' do
+        subject(:user) { FactoryGirl.create(:user) }
+        let!(:premium) { FactoryGirl.create(:subscription, user: user) }
+
+        it 'returns premium' do
+          expect(user.membership_type).to eq 'Premium'
+        end
+      end
+    end
+
+    describe '#karma_total' do
+      subject(:user) { FactoryGirl.create(:user) }
+      it 'returns 0 when user initially created' do
+        expect(user.karma_total).to eq 0
+      end
+      context 'once associated karma object is created' do
+        subject(:user) { FactoryGirl.build(:user, karma: FactoryGirl.create(:karma, total: 50)) }
+        it 'returns non zero' do
+          expect(user.karma_total).to eq 50
+        end
+      end
+    end
+
+  end
+
+  context 'destroying user' do
+    it 'should soft destroy' do
+       user = User.new({ email: 'doh@doh.com', password: '12345678' })
+       user.save!
+       user.destroy!
+       expect(user.deleted_at).to_not eq nil
+    end
+  end
+
+  context 'creating user' do
+    it 'should not be possible to save a user with nil Karma' do
+      user = User.new({ email: 'doh@doh.com', password: '12345678' })
+      user.save!
+      expect(user.karma).not_to be_nil
+    end
+    it 'should not override existing karma' do
+      user = User.new({ email: 'doh@doh.com', password: '12345678' })
+      user.karma = Karma.new(total: 50)
+      user.save!
+      expect(user.karma.total).to eq 50
+    end
+  end
+
+  context 'look up stripe id from subscription' do
+    let(:subscription) { mock_model(Subscription, save: true) }
+    before { allow(subscription).to receive(:[]=) }
+
+    it 'asks subscription for identifier' do
+      expect(subscription).to receive :identifier
+      subject.subscription = subscription
+      subject.stripe_customer_id
+    end
+
+  end
+
+end

@@ -19,6 +19,7 @@ require 'capybara/rspec'
 require 'webmock/rspec'
 require 'capybara-screenshot/rspec'
 require 'public_activity/testing'
+require 'paper_trail/frameworks/rspec'
 
 PublicActivity.enabled = true
 
@@ -45,11 +46,15 @@ RSpec.configure do |config|
   # config.mock_with :flexmock
   # config.mock_with :rr
 
-  config.mock_with :rspec
+  config.mock_with :rspec do |c|
+    c.syntax = [:should, :expect]
+  end
+
   config.include Helpers
   config.include Devise::TestHelpers, :type => :controller
   config.include Devise::TestHelpers, :type => :helper
   config.include Devise::TestHelpers, :type => :view
+  config.include RSpecHtmlMatchers
 
   config.before(:suite) do
     DatabaseCleaner.strategy = :transaction
@@ -83,4 +88,13 @@ RSpec.configure do |config|
   # the seed, which is printed after each run.
   #     --seed 1234
   #config.order = "random"
+
+  config.infer_spec_type_from_file_location!
+end
+
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
 end

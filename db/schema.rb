@@ -11,12 +11,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150410173625) do
+ActiveRecord::Schema.define(version: 20161122200727) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "activities", force: true do |t|
+  create_table "activities", force: :cascade do |t|
     t.integer  "trackable_id"
     t.string   "trackable_type"
     t.integer  "owner_id"
@@ -33,7 +33,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "activities", ["recipient_id", "recipient_type"], name: "index_activities_on_recipient_id_and_recipient_type", using: :btree
   add_index "activities", ["trackable_id", "trackable_type"], name: "index_activities_on_trackable_id_and_trackable_type", using: :btree
 
-  create_table "articles", force: true do |t|
+  create_table "articles", force: :cascade do |t|
     t.integer  "user_id"
     t.string   "title",      null: false
     t.text     "content"
@@ -46,7 +46,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "articles", ["title"], name: "index_articles_on_title", using: :btree
   add_index "articles", ["user_id"], name: "index_articles_on_user_id", using: :btree
 
-  create_table "authentications", force: true do |t|
+  create_table "authentications", force: :cascade do |t|
     t.integer  "user_id",    null: false
     t.string   "provider",   null: false
     t.string   "uid",        null: false
@@ -56,7 +56,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
 
   add_index "authentications", ["user_id"], name: "index_authentications_on_user_id", using: :btree
 
-  create_table "commit_counts", force: true do |t|
+  create_table "commit_counts", force: :cascade do |t|
     t.integer "commit_count"
     t.integer "project_id"
     t.integer "user_id"
@@ -65,7 +65,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "commit_counts", ["project_id"], name: "index_commit_counts_on_project_id", using: :btree
   add_index "commit_counts", ["user_id"], name: "index_commit_counts_on_user_id", using: :btree
 
-  create_table "documents", force: true do |t|
+  create_table "documents", force: :cascade do |t|
     t.string   "title"
     t.text     "body"
     t.integer  "project_id"
@@ -80,7 +80,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "documents", ["slug", "user_id"], name: "index_documents_on_slug_and_user_id", unique: true, using: :btree
   add_index "documents", ["user_id"], name: "index_documents_on_user_id", using: :btree
 
-  create_table "event_instances", force: true do |t|
+  create_table "event_instances", force: :cascade do |t|
     t.integer  "event_id"
     t.string   "title"
     t.string   "hangout_url"
@@ -92,9 +92,11 @@ ActiveRecord::Schema.define(version: 20150410173625) do
     t.integer  "user_id"
     t.string   "yt_video_id"
     t.text     "participants"
+    t.string   "hoa_status"
+    t.boolean  "url_set_directly", default: false
   end
 
-  create_table "events", force: true do |t|
+  create_table "events", force: :cascade do |t|
     t.string   "name"
     t.string   "category"
     t.text     "description"
@@ -111,12 +113,14 @@ ActiveRecord::Schema.define(version: 20150410173625) do
     t.datetime "start_datetime"
     t.integer  "duration"
     t.text     "exclusions"
+    t.integer  "project_id"
+    t.integer  "creator_id"
   end
 
   add_index "events", ["slug"], name: "index_events_on_slug", unique: true, using: :btree
   add_index "events", ["start_datetime"], name: "index_events_on_start_datetime", using: :btree
 
-  create_table "follows", force: true do |t|
+  create_table "follows", force: :cascade do |t|
     t.integer  "followable_id",                   null: false
     t.string   "followable_type",                 null: false
     t.integer  "follower_id",                     null: false
@@ -129,7 +133,33 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "follows", ["followable_id", "followable_type"], name: "fk_followables", using: :btree
   add_index "follows", ["follower_id", "follower_type"], name: "fk_follows", using: :btree
 
-  create_table "newsletters", force: true do |t|
+  create_table "friendly_id_slugs", force: :cascade do |t|
+    t.string   "slug",                      null: false
+    t.integer  "sluggable_id",              null: false
+    t.string   "sluggable_type", limit: 50
+    t.string   "scope"
+    t.datetime "created_at"
+  end
+
+  add_index "friendly_id_slugs", ["slug", "sluggable_type", "scope"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type_and_scope", unique: true, using: :btree
+  add_index "friendly_id_slugs", ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type", using: :btree
+  add_index "friendly_id_slugs", ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id", using: :btree
+  add_index "friendly_id_slugs", ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type", using: :btree
+
+  create_table "hangout_participants_snapshots", force: :cascade do |t|
+    t.integer "event_instance_id"
+    t.text    "participants"
+  end
+
+  create_table "karmas", force: :cascade do |t|
+    t.integer  "user_id"
+    t.integer  "total",                                            default: 0
+    t.integer  "hangouts_attended_with_more_than_one_participant", default: 0
+    t.datetime "created_at",                                                   null: false
+    t.datetime "updated_at",                                                   null: false
+  end
+
+  create_table "newsletters", force: :cascade do |t|
     t.string   "title",                        null: false
     t.string   "subject",                      null: false
     t.text     "body",                         null: false
@@ -141,7 +171,13 @@ ActiveRecord::Schema.define(version: 20150410173625) do
     t.datetime "updated_at"
   end
 
-  create_table "projects", force: true do |t|
+  create_table "payment_sources", force: :cascade do |t|
+    t.string  "type"
+    t.string  "identifier"
+    t.integer "subscription_id"
+  end
+
+  create_table "projects", force: :cascade do |t|
     t.string   "title"
     t.text     "description"
     t.string   "status"
@@ -159,7 +195,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "projects", ["slug"], name: "index_projects_on_slug", unique: true, using: :btree
   add_index "projects", ["user_id"], name: "index_projects_on_user_id", using: :btree
 
-  create_table "static_pages", force: true do |t|
+  create_table "static_pages", force: :cascade do |t|
     t.string   "title"
     t.text     "body"
     t.integer  "parent_id"
@@ -170,14 +206,21 @@ ActiveRecord::Schema.define(version: 20150410173625) do
 
   add_index "static_pages", ["slug"], name: "index_static_pages_on_slug", unique: true, using: :btree
 
-  create_table "statuses", force: true do |t|
+  create_table "statuses", force: :cascade do |t|
     t.string   "status"
     t.integer  "user_id"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
 
-  create_table "taggings", force: true do |t|
+  create_table "subscriptions", force: :cascade do |t|
+    t.string   "type"
+    t.datetime "started_at"
+    t.datetime "ended_at"
+    t.integer  "user_id"
+  end
+
+  create_table "taggings", force: :cascade do |t|
     t.integer  "tag_id"
     t.integer  "taggable_id"
     t.string   "taggable_type"
@@ -192,14 +235,14 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "taggings", ["tagger_id"], name: "index_taggings_on_tagger_id", using: :btree
   add_index "taggings", ["tagger_type"], name: "index_taggings_on_tagger_type", using: :btree
 
-  create_table "tags", force: true do |t|
+  create_table "tags", force: :cascade do |t|
     t.string  "name"
     t.integer "taggings_count", default: 0
   end
 
   add_index "tags", ["name"], name: "index_tags_on_name", unique: true, using: :btree
 
-  create_table "users", force: true do |t|
+  create_table "users", force: :cascade do |t|
     t.string   "email",                  default: "",   null: false
     t.string   "encrypted_password",     default: "",   null: false
     t.string   "reset_password_token"
@@ -228,17 +271,19 @@ ActiveRecord::Schema.define(version: 20150410173625) do
     t.boolean  "display_hire_me"
     t.text     "bio"
     t.boolean  "receive_mailings",       default: true
-    t.integer  "karma_points",           default: 0
     t.string   "country_code"
     t.integer  "timezone_offset"
     t.integer  "status_count",           default: 0
+    t.string   "stripe_customer"
+    t.datetime "deleted_at"
   end
 
+  add_index "users", ["deleted_at"], name: "index_users_on_deleted_at", using: :btree
   add_index "users", ["email"], name: "index_users_on_email", unique: true, using: :btree
   add_index "users", ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true, using: :btree
   add_index "users", ["slug"], name: "index_users_on_slug", unique: true, using: :btree
 
-  create_table "versions", force: true do |t|
+  create_table "versions", force: :cascade do |t|
     t.string   "item_type",  null: false
     t.integer  "item_id",    null: false
     t.string   "event",      null: false
@@ -249,7 +294,7 @@ ActiveRecord::Schema.define(version: 20150410173625) do
 
   add_index "versions", ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id", using: :btree
 
-  create_table "votes", force: true do |t|
+  create_table "votes", force: :cascade do |t|
     t.integer  "votable_id"
     t.string   "votable_type"
     t.integer  "voter_id"
@@ -264,4 +309,5 @@ ActiveRecord::Schema.define(version: 20150410173625) do
   add_index "votes", ["votable_id", "votable_type", "vote_scope"], name: "index_votes_on_votable_id_and_votable_type_and_vote_scope", using: :btree
   add_index "votes", ["voter_id", "voter_type", "vote_scope"], name: "index_votes_on_voter_id_and_voter_type_and_vote_scope", using: :btree
 
+  add_foreign_key "events", "users", column: "creator_id"
 end

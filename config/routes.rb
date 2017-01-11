@@ -6,10 +6,14 @@ WebsiteOne::Application.routes.draw do
   resources :activities
   resources :newsletters
 
+  match '/subscriptions/upgrade' => 'subscriptions#upgrade', :via => [:put]
+  resources :subscriptions
+
   devise_for :users, :controllers => {:registrations => 'registrations'}
-  resources :users, :only => [:index, :show] , :format => false do
+  resources :users, :only => [:index, :show], :format => false do
     member do
       patch :add_status
+      delete :destroy
     end
   end
 
@@ -36,6 +40,8 @@ WebsiteOne::Application.routes.draw do
       put :mercury_update
       get :mercury_saved
     end
+
+    resources :events, only: [:index]
   end
 
   resources :events, :format => false do
@@ -45,18 +51,21 @@ WebsiteOne::Application.routes.draw do
   end
 
 
-  get '/verify/:id' => redirect {|params,request| "http://av-certificates.herokuapp.com/verify/#{params[:id]}"}
+  get '/mentors' => 'users#index', defaults: {title: 'Mentor'}
+  get '/premium_members' => 'users#index', defaults: {title: 'Premium'}
 
-  post 'preview/article', to: 'articles#preview',:format => false
+  get '/verify/:id' => redirect { |params, request| "http://av-certificates.herokuapp.com/verify/#{params[:id]}" }
+
+  post 'preview/article', to: 'articles#preview', :format => false
   patch 'preview/article', to: 'articles#preview', as: 'preview_articles', :format => false
 
-  get 'projects/:project_id/:id', to: 'documents#show',:format => false
+  get 'projects/:project_id/:id', to: 'documents#show', :format => false
 
   get '/auth/:provider/callback' => 'authentications#create', :format => false
   get '/auth/failure' => 'authentications#failure', :format => false
   get '/auth/destroy/:id', to: 'authentications#destroy', via: :delete, :format => false
 
-  post 'mail_hire_me_form', to: 'users#hire_me_contact_form' , :format => false
+  post 'mail_hire_me_form', to: 'users#hire_me_contact_form', :format => false
   get 'scrums', to: 'scrums#index', as: 'scrums', :format => false
 
   put '*id/mercury_update', to: 'static_pages#mercury_update', as: 'static_page_mercury_update', :format => false

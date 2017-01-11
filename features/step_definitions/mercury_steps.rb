@@ -28,10 +28,6 @@ When(/^I (try to use|am using) the Mercury Editor to edit ([^"]*) "([^"]*)"$/) d
   visit "/editor#{url_for_title(action: 'show', controller: model, title: title)}"
 end
 
-Then(/^I should see the editable field "([^"]*)"$/) do |field|
-  find(:css, "div#document_#{field.downcase.singularize}")
-end
-
 When(/^I try to edit the page$/) do
   visit '/editor' + current_path
 end
@@ -40,9 +36,9 @@ Then /^I should( not)? see button "([^"]*)" in Mercury Editor$/ do |negative, bu
   button = 'new_document_link' if button == 'New document'
   page.driver.within_frame('mercury_iframe') {
     unless negative
-      expect(has_link? button).to be_true
+      expect(has_link? button).to be_truthy
     else
-      expect(has_link? button).to be_false
+      expect(has_link? button).to be_falsey
     end
   }
 end
@@ -59,7 +55,7 @@ When(/^I click on the "Insert Media" button$/) do
 end
 
 Then(/^the Mercury Editor modal window should (not |)be visible$/) do |visible|
-  page.should have_css '.mercury-modal', visible: visible.blank?
+  expect(page).to have_css '.mercury-modal', visible: visible.blank?
 end
 
 And(/^I am focused on the "([^"]*)"$/) do |item|

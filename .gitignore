@@ -61,6 +61,7 @@ zeus.json
 
 .pryrc
 
+config/secrets.yml
 config/settings.local.yml
 config/settings/*.local.yml
 config/environments/*.local.yml
@@ -70,3 +71,13 @@ Guardfile
 
 .vagrant/
 tags
+.byebug_history
+
+node_modules/*
+
+vendor/assets/javascripts/moment.min.js
+vendor/assets/javascripts/moment-timezone-with-data-2010-2020.js
+vendor/assets/javascripts/bootstrap-datepicker.js
+vendor/assets/javascripts/bootstrap-timepicker.min.js
+vendor/assets/javascripts/typeahead.jquery.js
+vendor/assets/javascripts/nprogress.js

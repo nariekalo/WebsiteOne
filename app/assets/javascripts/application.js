@@ -13,24 +13,25 @@
 //= require jquery
 //= require jquery_ujs
 //= require bootstrap
-//= require nprogressbar
+//= require nprogress
 //= require bootstrap-datepicker
-//= require bootstrap-timepicker
-//= require typeahead
+//= require bootstrap-timepicker.min
+//= require typeahead.jquery
 //= require bootstrap-tokenfield.min
 //= require bootstrap-tags
-//= require bootstrap/modal
 //= require_self
 //= require_directory ./global-modules
 //= require_tree .
 //= stub mercury_init
 //= stub google-analytics
 //= stub disqus
-//= stub events
+//= require events
 //= stub event_instances
 //= require local_time
 //= require jvectormap
 //= require jvectormap/maps/world_mill_en
+//= require moment.min
+//= require moment-timezone-with-data-2010-2020
 
 // To deal with the headache of initializing JavaScripts with TurboLinks, I
 // wrote this custom module definer to handle initialization code

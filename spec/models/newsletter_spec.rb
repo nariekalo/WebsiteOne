@@ -2,27 +2,27 @@ require 'spec_helper'
 
 describe Newsletter do
   it 'has a valid factory' do
-    FactoryGirl.build(:newsletter).should be_valid
+    expect(FactoryGirl.build(:newsletter)).to be_valid
   end
 
   describe "is invalid" do
     it 'when subejct is empty' do
-      FactoryGirl.build(:newsletter, subject: nil).should_not be_valid
+      expect(FactoryGirl.build(:newsletter, subject: nil)).to_not be_valid
     end
 
     it 'when title is emtpy' do
-      FactoryGirl.build(:newsletter, title: nil).should_not be_valid
+      expect(FactoryGirl.build(:newsletter, title: nil)).to_not be_valid
     end
 
     it 'when body is empty' do
-      FactoryGirl.build(:newsletter, body: nil).should_not be_valid
+      expect(FactoryGirl.build(:newsletter, body: nil)).to_not be_valid
     end
   end
 
   describe "class variables" do
     before do
-      Newsletter.const_set('CHUNK_SIZE', Settings.newsletter.chunk_size)
-      Newsletter.const_set('SEND_AS', Settings.newsletter.send_as)
+      Newsletter.redefine_without_warning('CHUNK_SIZE', Settings.newsletter.chunk_size)
+      Newsletter.redefine_without_warning('SEND_AS', Settings.newsletter.send_as)
     end
 
     it 'configures as scheduler_job' do
@@ -39,12 +39,12 @@ describe Newsletter do
       receiver_users = FactoryGirl.create_list(:user, 2, receive_mailings: true)
       non_receiver_users = FactoryGirl.create_list(:user, 2, receive_mailings: false)
       @newsletter = FactoryGirl.create(:newsletter)
-      Newsletter.const_set('SEND_AS', :instant)
+      Newsletter.redefine_without_warning('SEND_AS', :instant)
     end
 
     after :all do
-      Newsletter.const_set('CHUNK_SIZE', 180)
-      Newsletter.const_set('SEND_AS', :scheduler_job)
+      Newsletter.redefine_without_warning('CHUNK_SIZE', 180)
+      Newsletter.redefine_without_warning('SEND_AS', :scheduler_job)
     end
 
     it 'after do_send is set to true' do
@@ -56,7 +56,7 @@ describe Newsletter do
       @newsletter.do_send = true
       @newsletter.save
       @newsletter.reload 
-      @newsletter.sent_at.should be_a(Time)
+      expect(@newsletter.sent_at).to be_a(Time)
     end
 
     it 'updates was_sent to true' do

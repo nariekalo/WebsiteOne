@@ -27,28 +27,32 @@ describe AuthenticationsController do
 
       @auth = double(Authentication)
       @auths = [@auth]
-      @user.should_receive(:authentications).at_least(1).and_return @auths
-      @auths.should_receive(:find).and_return @auth
+      expect(@user).to receive(:authentications).at_least(1).and_return @auths
+      expect(@auths).to receive(:find).and_return @auth
       @auth.stub(destroy: true)
     end
 
     it 'should require authentication' do
-      controller.should_receive(:authenticate_user!)
+      User.stub(find: @user)
+      expect(controller).to receive(:authenticate_user!)
+      expect(@user).to receive(:update_attributes)
       get :destroy, id: 1
     end
 
     it 'should be removable for users with a password' do
-      @auths.should_receive(:count).and_return 2
-      @auth.should_receive(:destroy).and_return true
+      User.stub(find: @user)
+      expect(@auths).to receive(:count).and_return 2
+      expect(@auth).to receive(:destroy).and_return true
+      expect(@user).to receive(:update_attributes).and_return true
       get :destroy, id: 1
       expect(flash[:notice]).to eq 'Successfully removed profile.'
     end
 
     it 'should not be allowed for users without any other means of authentication' do
-      @auths.should_receive(:count).and_return 1
-      @user.should_receive(:encrypted_password).and_return nil
+      expect(@auths).to receive(:count).and_return 1
+      expect(@user).to receive(:encrypted_password).and_return nil
       get :destroy, id: 1
-      expect(flash[:alert]).to eq 'Bad idea!'
+      expect(flash[:alert]).to eq 'Failed to unlink GitHub. Please use another provider for login or reset password.'
     end
   end
 
@@ -66,8 +70,8 @@ describe AuthenticationsController do
 
     it 'should sign in the correct user for existing profiles' do
       @auth = double(Authentication, user: @user)
-      Authentication.should_receive(:find_by_provider_and_uid).and_return @auth
-      controller.should_receive(:sign_in_and_redirect) do
+      expect(Authentication).to receive(:find_by_provider_and_uid).and_return @auth
+      expect(controller).to receive(:sign_in_and_redirect) do
         controller.redirect_to root_path
       end
       get :create, provider: @provider
@@ -76,14 +80,14 @@ describe AuthenticationsController do
 
     context 'for new profiles' do
       before(:each) do
-        Authentication.should_receive(:find_by_provider_and_uid).and_return nil
-        User.should_receive(:new).and_return(@user)
+        expect(Authentication).to receive(:find_by_provider_and_uid).and_return nil
+        expect(User).to receive(:new).and_return(@user)
       end
 
       it 'should create a new user for non-existing profiles' do
-        Mailer.stub_chain :send_welcome_message, :deliver
-        @user.should_receive(:save).and_return(true)
-        controller.should_receive(:sign_in_and_redirect) do
+        Mailer.stub_chain :send_welcome_message, :deliver_now
+        expect(@user).to receive(:save).and_return(true)
+        expect(controller).to receive(:sign_in_and_redirect) do
           controller.redirect_to root_path
         end
         get :create, provider: @provider
@@ -91,7 +95,7 @@ describe AuthenticationsController do
       end
 
       it 'should redirect to the new user form if there is an error' do
-        @user.should_receive(:save).and_return(false)
+        expect(@user).to receive(:save).and_return(false)
         get :create, provider: @provider
         expect(response).to redirect_to new_user_registration_path
       end
@@ -127,7 +131,7 @@ describe AuthenticationsController do
       it 'should be able to create other profiles' do
         other_auths = %w( Glitter Smoogle HitPub )
         other_auths.each do |p|
-          @auth.should_receive(:save).and_return true
+          expect(@auth).to receive(:save).and_return true
           get :create, provider: p
           expect(flash[:notice]).to eq 'Authentication successful.'
           expect(response).to redirect_to @path
@@ -135,68 +139,10 @@ describe AuthenticationsController do
       end
 
       it 'should not accept multiple profiles from the same source' do
-        @auth.should_receive(:save).and_return false
+        expect(@auth).to receive(:save).and_return false
         get :create, provider: @provider
         expect(flash[:alert]).to eq 'Unable to create additional profiles.'
         expect(response).to redirect_to @path
-      end
-    end
-  end
-
-  describe 'youtube authentication' do
-    context 'youtube request' do
-      before do
-        request.env['omniauth.params']['youtube'] = true
-        request.env['omniauth.auth']['credentials'] = {}
-      end
-
-      context 'user is signed-in' do
-        let(:user) { FactoryGirl.create(:user) }
-        before do
-          allow(controller).to receive(:current_user).and_return(user)
-        end
-
-        it 'links to youtube' do
-          expect(controller).to receive(:link_to_youtube).and_call_original
-          get :create, provider: 'gplus'
-        end
-
-        it 'updates users youtube_id if it does not exist' do
-          request.env['omniauth.auth']['credentials']['token'] = 'token'
-          allow(user).to receive(:youtube_user_name).and_return('test_user_name')
-          allow(YoutubeHelper).to receive(:channel_id).and_return('test_id')
-          get :create, provider: 'gplus'
-          expect(user.youtube_id).to eq('test_id')
-        end
-
-        it 'updates users youtube_user_name if it does not exist' do
-          request.env['omniauth.auth']['credentials']['token'] = 'token'
-          allow(user).to receive(:youtube_id).and_return('test_id')
-          allow(YoutubeHelper).to receive(:youtube_user_name).and_return('test_user_name')
-
-          get :create, provider: 'gplus'
-
-          expect(user.youtube_user_name).to eq('test_user_name')
-        end
-      end
-
-      context 'user is not signed-in' do
-        it 'does not link to youtube' do
-          allow(controller).to receive(:current_user)
-          expect(controller).to_not receive(:link_to_youtube)
-
-          get :create, provider: 'gplus'
-        end
-      end
-    end
-
-    context 'non-youtube request' do
-      it 'does not link to youtube' do
-        request.env['omniauth.params']['youtube'] = nil
-
-        expect(controller).to_not receive(:link_to_youtube)
-
-        get :create, provider: 'gplus'
       end
     end
   end
@@ -219,6 +165,24 @@ describe AuthenticationsController do
       expect(controller).to receive(:link_github_profile).and_call_original
       get :create, provider: 'github'
       expect(user.github_profile_url).to eq('http://github.com/test')
+    end
+
+    it 'unlinks Github profile when Github profile is removed by user' do
+      @user = stub_model(User, github_profile_url: "http://github.com/test", encrypted_password: "i-am-encrypted")
+      controller.stub(current_user: @user)
+      @auth = double(Authentication, user: @user)
+      @auths = [@auth]
+
+      User.stub(find: @user)
+      expect(@user).to receive(:authentications).at_least(1).and_return @auths
+      expect(@auths).to receive(:find).and_return @auth
+
+      expect(@auths).to receive(:count).and_return 2
+      expect(@auth).to receive(:destroy).and_return true
+
+      expect(controller).to receive(:destroy).and_call_original
+      get :destroy, id: @user.id
+      expect(@user.github_profile_url).to be_nil
     end
   end
 end

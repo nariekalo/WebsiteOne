@@ -1,0 +1,73 @@
+@import "compass/css3";
+@import "bootstrap-sprockets";
+@import "bootstrap";
+@import "font-awesome";
+
+@import "variables";
+@import "mixins";
+
+@import "main";
+@import "global/*";
+@import "layout/*";
+
+@import "timeline";
+
+@import "components/dropdown";
+@import "components/calendar-date";
+
+.custom_menu {
+  width: 200px !important;
+  background-color: #34495e !important;
+}
+
+.custom_menu_item {
+  margin-left: 10px;
+  margin-top: 10px;
+  color: white !important;
+}
+
+.custom_menu_link {
+  color: white !important;
+}
+
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  padding-top: 30px; height: 0; overflow: hidden;
+}
+
+.video-container iframe,
+.video-container object,
+.video-container embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.user-status {
+	margin-left: 10px;
+	margin-top: -5px;
+	color: #54555a;
+}
+
+/* enable absolute positioning */
+.inner-addon {
+  position: relative;
+}
+
+/* style icon */
+.inner-addon .fa {
+  position: absolute;
+  padding: 10px;
+  pointer-events: none;
+}
+
+/* align icon */
+.left-addon .fa { left:  0px; }
+.right-addon .fa { right: 0px; }
+
+/* add padding  */
+.left-addon input  { padding-left:  30px; }
+.right-addon input { padding-right: 30px; }

@@ -42,9 +42,8 @@ class EventInstancePresenter < BasePresenter
   end
 
   def video_link
-    if yt_video_id.present?
-      link_to title, video_url, id: yt_video_id, class: 'yt_link', data: { content: title }
-    end
+    return I18n.t('error_messages.video_missing') unless yt_video_id.present?
+    link_to title, video_url, id: yt_video_id, class: 'yt_link', data: { content: title }
   end
 
   def video_embed_link
@@ -60,8 +59,8 @@ class EventInstancePresenter < BasePresenter
 
     participants.map do |participant|
       begin
-        person = participant.last[:person]
-        user = Authentication.find_by(provider: 'gplus', uid: person[:id]).try!(:user)
+        person = participant.last['person']
+        user = Authentication.find_by(provider: 'gplus', uid: person['id']).try!(:user)
         next if user == host
         user || NullUser.new(person[:displayName])
       rescue NoMethodError

@@ -1,5 +1,13 @@
+
 class User < ActiveRecord::Base
+  acts_as_paranoid
+
   include Filterable
+
+  extend Forwardable
+
+  def_delegator :karma, :hangouts_attended_with_more_than_one_participant=
+  def_delegator :karma, :hangouts_attended_with_more_than_one_participant
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable and :omniauthable
@@ -26,8 +34,8 @@ class User < ActiveRecord::Base
 
   before_save :generate_timezone_offset
 
-  after_validation :geocode, if: ->(obj){ obj.last_sign_in_ip_changed? }
-  after_validation -> { KarmaCalculator.new(self).perform }
+  after_validation :geocode, if: ->(obj) { obj.last_sign_in_ip_changed? }
+  # after_validation -> { KarmaCalculator.new(self).perform }
   after_create :send_slack_invite, if: -> { Features.slack.invites.enabled }
 
   has_many :authentications, dependent: :destroy
@@ -38,18 +46,27 @@ class User < ActiveRecord::Base
   has_many :commit_counts
   has_many :status
 
+  has_one :subscription, autosave: true
+
+  def stripe_customer_id # ultimately replacing the field stripe_customer
+    subscription.identifier
+  end
+
+  has_one :karma
+  after_save :build_karma, if: -> { karma.nil? }
+
   accepts_nested_attributes_for :status
   scope :mail_receiver, -> { where(receive_mailings: true) }
   scope :project_filter, -> (project_id) {
     joins(:follows)
-    .where(
-      follows: {
-        blocked: false,
-        followable_id: project_id,
-        followable_type: 'Project',
-        follower_type: 'User'
-      }
-    )
+        .where(
+            follows: {
+                blocked: false,
+                followable_id: project_id,
+                followable_type: 'Project',
+                follower_type: 'User'
+            }
+        )
   }
   scope :timezone_filter, -> (offset) {
     where("users.timezone_offset BETWEEN ? AND ?", offset[0], offset[1])
@@ -57,12 +74,24 @@ class User < ActiveRecord::Base
   scope :allow_to_display, -> { where(display_profile: true) }
   scope :by_create, -> { order(:created_at) }
   scope :online, -> (argument) { where("users.updated_at > ?", 10.minutes.ago) }
+  scope :title, -> (title) { tagged_with(title) }
 
   self.per_page = 30
 
+  def self.filter_if_title title
+    return User.all if title.blank?
+    User.tagged_with(title)
+  end
+
+  def membership_type
+    return "Basic" unless subscription
+    subscription.type
+  end
+
   def apply_omniauth(omniauth)
     self.email = omniauth['info']['email'] if email.blank?
-    authentications.build(:provider => omniauth['provider'], :uid => omniauth['uid'])
+    authentications.build(:provider => omniauth['provider'], :uid => omniauth['uid']) unless email.blank?
+    @omniauth_provider = omniauth['provider']
   end
 
   def password_required?
@@ -75,8 +104,8 @@ class User < ActiveRecord::Base
 
   def followed_project_tags
     following_projects
-      .flat_map(&:youtube_tags)
-      .push('scrum')
+        .flat_map(&:youtube_tags)
+        .push('scrum')
   end
 
   def display_name
@@ -106,6 +135,17 @@ class User < ActiveRecord::Base
     end
   end
 
+  def profile_completeness
+    awarded = 0
+    awarded += 2 if skill_list.present?
+    awarded += 2 if github_profile_url.present?
+    awarded += 2 if youtube_user_name.present?
+    awarded += 2 if bio.present?
+    awarded += 1 if first_name.present?
+    awarded += 1 if last_name.present?
+    return awarded
+  end
+
   def is_privileged?
     Settings.privileged_users.split(',').include?(email)
   end
@@ -121,7 +161,7 @@ class User < ActiveRecord::Base
 
   def self.map_data
     users = User.group(:country_code).count
-    clean = proc{ |k,v| !k.nil? ? Hash === v ? v.delete_if(&clean) : false : true }
+    clean = proc { |k, v| !k.nil? ? Hash === v ? v.delete_if(&clean) : false : true }
     users.delete_if(&clean)
     users.to_json
   end
@@ -130,15 +170,50 @@ class User < ActiveRecord::Base
     bio.blank? || skills.blank? || first_name.blank? || last_name.blank?
   end
 
+  def commit_count_total
+    commit_counts.sum :commit_count
+  end
+
+  def number_hangouts_started_with_more_than_one_participant
+    event_instances.select { |h| h.participants != nil && h.participants.count > 1 }.count
+  end
+
+  def activity
+    2 * [[(sign_in_count - 2), 0].max, 3].min
+  end
+
+  def membership_length
+    1 * [user_age_in_months.to_i, 6].min
+  end
+
+  def karma_total
+    return karma.total if karma
+    0
+  end
+
   private
 
+  def user_age_in_months
+    (DateTime.current - created_at.to_datetime).to_i / 30
+  end
+
   def send_slack_invite
-    SlackInviteJob.new.async.perform(email)
+    SlackInviteJob.perform_async(email)
   end
 
   def generate_timezone_offset
     if self.latitude && self.longitude
       self.timezone_offset = ActiveSupport::TimeZone.new(NearestTimeZone.to(self.latitude, self.longitude)).utc_offset
+    end
+  end
+
+  validate :email_absence
+
+  def email_absence
+    if email.blank? and not @omniauth_provider.nil?
+      errors.delete(:password)
+      errors.delete(:email)
+      errors.add(:base, I18n.t('error_messages.public_email', provider: @omniauth_provider.capitalize))
     end
   end
 end

@@ -30,7 +30,7 @@ class ApplicationController < ActionController::Base
   end
 
   # see Settings.yml for privileged user
-  # 
+  #
   def check_privileged
     raise ::AgileVentures::AccessDenied.new(current_user, request) unless current_user.is_privileged?
   end
@@ -50,7 +50,7 @@ class ApplicationController < ActionController::Base
       "#{edit_user_password_path}.*"
     ]
 
-    paths.any?{ |path| request.path =~ %r(#{path})}
+    paths.any?{ |path| request.original_fullpath =~ %r(#{path})}
   end
 
   def get_next_scrum
@@ -60,7 +60,7 @@ class ApplicationController < ActionController::Base
   def store_location
     # store last url - this is needed for post-login redirect to whatever the user last visited.
     if request.get? && !request_path_blacklisted?
-      session[:previous_url] = request.fullpath
+      session[:previous_url] = request.original_fullpath
     end
   end
 

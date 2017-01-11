@@ -1,36 +1,33 @@
 <% provide :title, 'Members' %>
 <div class="row">
-  <div class="col-xs-12 col-sm-12">
-    <h1>Members Directory</h1>
+  <div class="col-xs-12 col-sm-12 float-xs-none">
+    <h1><%= @user_type.try(:pluralize) %> Directory</h1>
     <% if @users_count == 0 %>
         <p>It is a lonely planet we live in&#8230;</p>
     <% else %>
-        <p>Check out our <%= @users_count %> awesome volunteers from all over the globe!</p>
+        <p>Check out our <%= @users_count %> awesome <%= @user_type.try(:pluralize, @users_count).try(:downcase) %> from all over the globe!</p>
     <% end %>
   </div>
   <div class="col-sm-12 well">
     <p>Filter users by</p>
     <%= form_tag(users_path, remote: true, method: "get", class: "form-inline filters-users-advanced") do %>
-        <%= select_tag :project_filter, options_from_collection_for_select(@projects, 'id', 'title', params[:project_filter]), {prompt: 'Project involvement...', class: 'form-control'} %>
-        <% if @current_user && @current_user.latitude %>
-            <%= select_tag :timezone_filter, options_for_select(['In My Timezone', 'Wider Timezone Area'], params[:timezone_filter]), {prompt: 'Time zone...', class: 'form-control'} %>
-        <% end %>
-        <%= check_box_tag :online, params[:online], (true if !params[:online].nil?) %> Recently Online
-        <%= submit_tag 'Search', class: 'btn btn-default' %>
+        <div class="row">
+          <div class="col-xs-12 col-sm-4">
+          <%= select_tag :project_filter, options_from_collection_for_select(@projects, 'id', 'title', params[:project_filter]), {prompt: 'Project involvement...', class: 'form-control'} %>
+          </div>
+          <% if @current_user && @current_user.latitude %>
+              <div class="col-xs-12 col-sm-4">
+                <%= select_tag :timezone_filter, options_for_select(['In My Timezone', 'Wider Timezone Area'], params[:timezone_filter]), {prompt: 'Time zone...', class: 'form-control'} %>
+              </div>
+          <% end %>
+          <div class="col-xs-12 col-sm-4">
+            <%= check_box_tag :online, params[:online], (true if !params[:online].nil?) %> Recently Online
+            <%= submit_tag 'Search', class: 'btn btn-default' %>
+          </div>
+        </div
     <% end %>
   </div>
 
-</div>
-<div class="row">
-  <div class="col-sm-12">
-    <form class="form-inline users-filter" role="form">
-      <div class="form-group inner-addon left-addon">
-        <label class="sr-only" for="user-filter">Filter users</label>
-        <i class="fa fa-search"></i>
-        <input type="text" class="form-control" id="user-filter" placeholder="Search members...">
-      </div>
-    </form>
-  </div>
 </div>
 <div class="row">
   <div class="col-sm-12">

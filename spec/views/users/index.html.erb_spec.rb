@@ -4,6 +4,7 @@ describe 'users/index.html.erb', :type => :view do
   before(:each) do
     @users = FactoryGirl.build_list(:user, 4, updated_at: '2013-09-30 05:00:00 UTC')
     @users_count = @users.count
+    allow(view).to receive(:paginate)
     assign(:projects, [])
   end
 
@@ -37,12 +38,6 @@ describe 'users/index.html.erb', :type => :view do
     end
   end
 
-  it 'should display user filter form' do
-    render
-    expect(rendered).to have_content('Filter users')
-    expect(rendered).to have_css('#user-filter')
-  end
-
   it 'should display a list of users' do
     render
     @users.each do |user|
@@ -59,6 +54,7 @@ describe 'users/index.html.erb', :type => :view do
 
   context 'renders the users count in the sentence above' do
     it 'has valid users count' do
+      @user_type = 'Volunteer'
       render
       expect(rendered).to have_content("Check out our #{@users_count} awesome volunteers from all over the globe!")
     end

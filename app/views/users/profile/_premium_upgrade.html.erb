@@ -1,0 +1,10 @@
+<% if presenter.user_same_as?(current_user) %>
+  <% button_text = 'Upgrade to Premium' %>
+<% else %>
+  <% button_text = 'Sponsor for Premium' %>
+<% end %>
+
+<%= form_tag new_subscription_path, method: "get" do %>
+  <input type="hidden" name="user_id" value="<%=presenter.user.slug %>">
+  <%= submit_tag button_text, class:"btn btn-primary btn-lg active", style: "margin: 5px;"%>
+<% end %>
